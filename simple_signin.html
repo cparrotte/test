@@ -1,0 +1,14 @@
+<html>
+<head>
+<script type="text/javascript">
+console.log(document.referrer);
+function goBackToReferrer() {
+	window.location = document.referrer;
+}
+</script>
+</head>
+<body>
+<input type="button" value="Go" onclick="goBackToReferrer()">
+</body>
+</html>
+
