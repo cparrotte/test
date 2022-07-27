@@ -1,9 +1,9 @@
 <html>
 <head>
 <script type="text/javascript">
-console.log(document.referrer);
 function goBackToReferrer() {
-	window.location = document.referrer;
+	const params = new URLSearchParams(window.location.search);
+	window.location = params.get(dest);
 }
 </script>
 </head>
