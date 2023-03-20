@@ -1,0 +1,218 @@
+
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script type="text/javascript" src="//player.interactivity.brightcove.com/latest/interactivity.js"></script>
+  
+    <style type="text/css">
+            .companion {
+                background-color: #eee;
+            }   
+    </style>            
+</head> 
+<body>
+    
+<div class="container">
+    <div class="row top">
+        <div class="col m10">
+            <div data-layout="top" class="companion">top</div>          
+        </div>
+        <div class="col m2">
+            SCORE: <span class="new badge" id="score">0</span>
+        </div>
+    </div>
+    <div class="row middle">
+        <div class="col m12">            
+            <div class="col m2"><div data-layout="left" class="companion">left</div></div>
+                <div class="col m8" id="main-content"><div data-layout="center" class="companion">                
+                    <div class="row">
+                        <div class="col s12">
+                          <ul class="tabs">
+                            <li class="tab col s12"><a href="#video" class="active">Video</a></li>
+                          </ul>
+                        </div>
+                        <div class="tab-content">
+                            <div id="video" class="col s12">
+                              
+<div style="width: 960px;"><video-js data-account="6292321057001" data-player="2pK4Pcikn" data-embed="default" controls="" data-video-id="6310745651112" data-interactivity-project-id="641484f1afe04500173cff84" data-application-id="" width="720" height="405" class="vjs-fluid"></video-js></div><script src="https://players.brightcove.net/6292321057001/2pK4Pcikn_default/index.min.js"></script>                              
+                              
+                              
+                            </div>
+                        </div>
+                    </div>
+                </div>              
+            </div>                      
+        </div>
+        <div class="col m2"><div data-layout="right" class="companion">right</div></div>
+    </div>
+    <div class="row bottom">
+        <div class="col m12"><div data-layout="bottom" class="companion">bottom</div></div>
+    </div>      
+</div>
+
+
+
+</body>
+<script type="text/javascript">
+    function loadCompanionContent(target,mode,html,url,height,width,title) {
+        /* 
+            This is (essentially) the code triggered by an AddOn action configured on an annotation in the video.
+
+            hapyak.message.send(
+            [window scope], [addon command], { 
+                customContext: [addon name], [name-value pairs] 
+            });
+
+            This function is here for simple CLI testing.
+            examples:
+            loadCompanionContent("bottom","replace",null,"https://corp.hapyak.com","200","100%");
+            loadCompanionContent("left","append","hello world",null);           
+            loadCompanionContent("center","tab","hello world",null,null,null,"HI!");
+        */
+        interactivity.message.send(window, 
+            "load", 
+            { 
+                "customContext": "companion_content",
+                "target": target,
+                "mode": mode,
+                "html": html,
+                "url":url,
+                "height":height,
+                "width":width, 
+                "title":title 
+            } );
+
+    }
+
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    /*
+        Register an to display a Score obtained by iteracting with the video
+        The AddOn just act as a proxy to the window.score_keeper object
+    */
+  interactivity.addon("score-keeper", {
+    init: function () {
+        /* called immediately to perform any setup */
+        window.score_keeper = {
+            score:0,
+            scoreEl: document.getElementById("score"),
+            increment:function(points,message) { this.update(this.score+Number(points), message) },
+                decrement:function(points,message) { this.update(this.score-Number(points), message) },
+            update:function(score,message) {
+                this.score=score;
+                this.scoreEl.textContent = this.score;
+
+                M.toast({html: 'Your score changed to ' + this.score + "!"})                
+            }       
+        }
+    },
+    increment:function(e) { window.score_keeper.increment(e.data.points, e.data.message) },
+    decrement:function(e) { window.score_keeper.decrement(e.data.points, e.data.message) }
+  });
+
+
+    /*
+        Register an AddOn to place content on the page when triggered from the video
+    */
+  interactivity.addon("companion-content", {
+    init: function () {
+        /* called immediately to perform any setup */
+    },
+    /* all keys and functions below are user-defined */
+    "load": function (e) {
+
+        var target = document.querySelector(".companion[data-layout='"+e.data.target+"']");
+            if (!target) { 
+                console.warn("Valid target not found in DOM", e.data);
+                return;
+            }       
+
+            var content = document.createElement("div");
+
+            if (e.data.html) {
+                //render inline html
+                content.innerHTML = e.data.html;
+            } else if (e.data.url) {
+                //render url in an iframe
+                var iframe = document.createElement("iframe");
+                iframe.style.height = e.data.height||"100%";
+                iframe.style.width = e.data.width||"100%";
+                iframe.frameborder = "0";
+                iframe.src = e.data.url;
+
+                content.appendChild(iframe);
+            }
+
+            var mode = e.data.mode||"replace"; //replace content in target by default
+            if(mode=="replace") {
+                target.innerHTML = content.outerHTML;
+            } else if (mode=="append") {
+                target.appendChild(content);
+            }
+            else if (mode=="tab" && e.data.title) {
+                //this is just a slightly fancier "append" using a material css tab component
+                var tabs = target.querySelectorAll(".tab");
+                var newTab = tabs[tabs.length-1].cloneNode(true);
+                var id = uuidv4();
+                newTab.querySelector("a").textContent = e.data.title;
+                newTab.querySelector("a").setAttribute("href","#"+id);
+                newTab.className = "tab col s" + Math.floor(12/(tabs.length+1));
+
+                var newTabContent = document.createElement("div");
+                newTabContent.id = id;
+                newTabContent.className = "col s12";
+
+                //insert after the last tab
+                tabs[tabs.length-1].parentNode.insertBefore(newTab, tabs[tabs.length-1].nextSibling);
+                target.querySelector(".tab-content").appendChild(newTabContent);
+                newTabContent.appendChild(content);
+
+                //rebalance colums
+                tabs.forEach(function(tab) {
+                    tab.className = "tab col s" + Math.floor(12/(tabs.length+1));
+                });
+
+                M.Tabs.getInstance(document.querySelector(".tabs")).destroy();
+                var instance = M.Tabs.init(document.querySelector(".tabs"), {});
+                instance.select(id);
+            }           
+
+            //just adding some css to make content display less jarring
+            target.classList.add("populated");
+
+    }    
+  });
+
+    //not AddOn related, just used for the example
+    // var instance = M.Tabs.init(document.querySelector(".tabs"), {});
+
+//     //standard HapYak viewer instantiation
+//   (function () {
+//       hapyak.viewer({
+//         apiKey: "d47fa4d2ed814d858e30",
+//             projectId: 317901,
+//             controls: false,
+//             resetVariables: true,
+//         player: videojs('hapyak-player'),
+//         videoType: "html5",
+//         playerType: "videojs4",
+//         autoplay: false,
+//             plugins: {
+//                 cdn: {
+//                     api: { enabled: false }
+//                 }
+//             }
+//       });
+//   })();
+
+});     
+
+function uuidv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+}
+</script>
+</html>
